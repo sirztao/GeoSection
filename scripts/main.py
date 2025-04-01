@@ -6,7 +6,18 @@ from section_final import process_section
 from projection_calculator import calculate_projection, generate_layered_output
 from rich import print
 
+def ensure_dir(dir_path):
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+
 def main():
+    # 初始化目录
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    input_dir = os.path.join(base_dir, 'data', 'input')
+    output_dir = os.path.join(base_dir, 'data', 'output')
+    ensure_dir(input_dir)
+    ensure_dir(output_dir)
+
     # 用户界面初始化
     print("╔═══════════════════════════════════════════════════════╗")
     print("║                 地质剖面数据处理系统                    ║")
@@ -16,10 +27,11 @@ def main():
         # -------------------- 阶段1: 数据清洗 --------------------
         print("\n📍 [1/4] 数据清洗")
         input_file = input("请输入GPS数据文件名（默认：GPS.xlsx）：").strip() or "GPS.xlsx"
+        input_path = os.path.join(input_dir, input_file)
         
-        cleaner = GPSCleaner(input_path=input_file)
+        cleaner = GPSCleaner(input_path=input_path)
         cleaned_df = cleaner.clean_data(threshold=20)
-        cleaned_file = input_file.replace('.xlsx', '_cleaned.xlsx')
+        cleaned_file = os.path.join(output_dir, input_file.replace('.xlsx', '_cleaned.xlsx'))
         cleaned_df.to_excel(cleaned_file, index=False)
         print(f"✅ 清洗数据已保存至：{cleaned_file}")
 
@@ -34,13 +46,14 @@ def main():
         # -------------------- 阶段3: 生成剖面 --------------------
         print("\n📍 [3/4] 生成剖面数据")
         result_df = process_section(cleaned_df, seccode)
-        output_file = f"{seccode}_section.xlsx"
+        output_file = os.path.join(output_dir, f"{seccode}_section.xlsx")
         result_df.to_excel(output_file, index=False)
         print(f"✅ 剖面数据已保存至：{output_file}")
 
         # -------------------- 阶段4: 投影计算 --------------------
         print("\n📍 [4/4] 投影计算")
-        gpoints_df = pd.read_excel("points.xlsx")
+        points_path = os.path.join(input_dir, "points.xlsx")
+        gpoints_df = pd.read_excel(points_path)
         
         # 执行投影计算（关键参数修正）
         projection_df = calculate_projection(
@@ -54,8 +67,8 @@ def main():
         layered_df = generate_layered_output(projection_df, result_df)
         
         # 保存结果文件
-        projection_file = f"{seccode}_projection.xlsx"
-        layered_file = f"{seccode}_layered.xlsx"
+        projection_file = os.path.join(output_dir, f"{seccode}_projection.xlsx")
+        layered_file = os.path.join(output_dir, f"{seccode}_layered.xlsx")
         projection_df.to_excel(projection_file, index=False)
         layered_df.to_excel(layered_file, index=False)
         
